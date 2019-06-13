@@ -46,30 +46,26 @@ struct svgplot {
 		ss << "<?xml version=\"1.0\" standalone=\"no\"?>\n"
 			<< "<svg"
 			<< " width=\"" << width << "\" height=\"" << height << "\""
-			// this makes it possible to draw in "plot" coordinates, except y axis is flipped
-			<< " viewBox=\"0 0 1 1\" preserveAspectRatio=\"none\""
 			<< " version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\""
-			<< ">\n";
+			<< ">\n"
+			<< "<g style=\"fill: none; stroke: black; stroke-width: 1px;\">\n";
 
-		// FIXME: physical units like em are unrealistic in (0, 0, 1, 1) viewport
-		// so the whole purpose of having it like this is defeated
 		// TODO: axes and stuff
 		ss << "<rect"
 			<< " width=\"100%\" height=\"100%\""
-			<< " style=\"fill: none; stroke: black; stroke-width: .001em;\""
 			<< "/>\n";
 
 		for (size_t i = 0; i < lines.size(); i++) {
-			ss << "<path style=\"fill: none; stroke: black; stroke-width: .001em;\" d=\"";
+			ss << "<path d=\"";
 			for (size_t j = 0; j < lines[i].n; j++)
 				ss << (j ? " L" : "M")
-					<< (lines[i].x[j] - axes.x[0])/(axes.x[1] - axes.x[0])
+					<< width * (lines[i].x[j] - axes.x[0])/(axes.x[1] - axes.x[0])
 					<< ','
-					<< 1 - (lines[i].y[j] - axes.y[0])/(axes.y[1] - axes.y[0]); // y axis is flipped
+					<< height * (axes.y[1] - lines[i].y[j])/(axes.y[1] - axes.y[0]);
 			ss << "\"/>\n";
 		}
 
-		ss << "</svg>\n";
+		ss << "</g></svg>\n";
 
 		return ss.str();
 	}
