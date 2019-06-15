@@ -21,7 +21,9 @@ Since the plot I needed was *really* simple, this came to life.
 What does it look like?
 =======================
 
-![example plot](example.svg)
+See the [example plot](example.svg). GitHub tries to "sanitize" it by removing
+an essential attribute and breaking the plot in the process (I agree that's a
+downside.)
 
 The plots are "responsive", which means that they retain the stroke width
 when scaled, but otherwise adapt to the viewport size, subject to their aspect
@@ -30,5 +32,5 @@ ratio.
 TODO
 ====
 
-[ ] Aspect ratio as setting - as of now, it's 1:1 only
-[ ] Plot subsampling - it's too easy to produce a megabyte-sized SVG, most of which you wouldn't lok at
+- [ ] Aspect ratio as setting - as of now, it's 1:1 only
+- [ ] Plot subsampling - it's too easy to produce a megabyte-sized SVG, most of which you wouldn't look at
