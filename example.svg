@@ -1,0 +1,13 @@
+<svg version="1.2" baseProfile="tiny" xmlns="http://www.w3.org/2000/svg" viewBox="-0.15 -0.01 1.16 1.11">
+<style>
+path { fill: none; stroke: black; stroke-width: 1px; }
+text { font-size: 0.05px; }
+</style>
+<path vector-effect="non-scaling-stroke" d="
+M0.05,1L0.9,1M0,0.99L0,0.1M0.25,1L0.25,1.01M0.5,1L0.5,1.01M0.75,1L0.75,1.01M0,0.8L-0.01,0.8M0,0.6L-0.01,0.6M0,0.4L-0.01,0.4M0,0.2L-0.01,0.2
+M0.05,0.9L0.1,0.8L0.15,0.3L0.2,0.6L0.25,0.2L0.3,0.4L0.35,0.99L0.4,0.8
+M0.5,0.3L0.55,0.7L0.65,0.9L0.7,0.3L0.75,0.1L0.8,0.7L0.85,0.1L0.9,0.6
+"/>
+<text x="0.25" dx="-0.5ex" y="1" dy="1em">5</text><text x="0.5" dx="-1ex" y="1" dy="1em">10</text><text x="0.75" dx="-1ex" y="1" dy="1em">15</text>
+<text x="0" dx="-2ex" y="0.825">0.2</text><text x="0" dx="-2ex" y="0.625">0.4</text><text x="0" dx="-2ex" y="0.425">0.6</text><text x="0" dx="-2ex" y="0.225">0.8</text>
+</svg>
