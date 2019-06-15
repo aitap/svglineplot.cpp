@@ -29,6 +29,20 @@ The plots are "responsive", which means that they retain the stroke width
 when scaled, but otherwise adapt to the viewport size, subject to their aspect
 ratio.
 
+How do I use it?
+================
+
+```c++
+#include <svgplot.hpp>
+
+std::vector<double> x = ..., y = ...;
+
+std::string svg = svgplot()
+	.add_line(&x[0], &y[0], x.size())
+	.set_ntics(7)
+	.draw();
+```
+
 TODO
 ====
 
