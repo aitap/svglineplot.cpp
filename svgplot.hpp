@@ -48,6 +48,7 @@ class svgplot {
 	double margins[n_margins_]; // fraction of plot size
 	double fontsize; // same
 	std::string strokewidth; // CSS units
+	double dmin; // Euclidean distance in plot coordinates to subsample at
 
 	std::vector<data> lines;
 
@@ -65,6 +66,7 @@ public:
 		set_margins(.1, .15, .01, .01);
 		set_fontsize(margins[bottom] / 2);
 		set_strokewidth("1px");
+		set_subsample(0);
 	}
 
 	svgplot & add_line(const double * x, const double * y, std::size_t n) {
@@ -100,6 +102,11 @@ public:
 
 	svgplot & set_strokewidth(const std::string & sw) {
 		strokewidth = sw;
+		return *this;
+	}
+
+	svgplot & set_subsample(const double dmin_) {
+		dmin = dmin_;
 		return *this;
 	}
 
@@ -155,10 +162,21 @@ public:
 
 		// now draw the actual lines
 		for (size_t i = 0; i < lines.size(); i++) {
-			for (size_t j = 0; j < lines[i].n; j++)
-				ss << (j ? 'L' : 'M')
-					<< scale(lines[i].x[j], axes.x) << ','
-					<< 1 - scale(lines[i].y[j], axes.y);
+			for (size_t j = 0; j < lines[i].n; j++) {
+				double lastdrawn[2],
+					x = scale(lines[i].x[j], axes.x),
+					y = 1 - scale(lines[i].y[j], axes.y);
+				if (
+					!j || // first point should always be drawn
+					std::sqrt(
+						std::pow(x - lastdrawn[0], 2) + std::pow(x - lastdrawn[1], 2)
+					) > dmin // others are drawn if they are sufficiently far
+				) {
+					ss << (j ? 'L' : 'M') << x << ',' << y;
+					lastdrawn[0] = x;
+					lastdrawn[1] = y;
+				}
+			}
 			ss << '\n';
 		}
 		ss << "\"/>\n";

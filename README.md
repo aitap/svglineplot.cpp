@@ -16,7 +16,15 @@ the SVG from `stdout`), but cross-platform bi-directional piping of child
 processes is a huge pain in the neck (and some deadlocks may be unavoidable,
 depending on the program in question).
 
-Since the plot I needed was *really* simple, this came to life.
+Since the plot I needed was *really* simple, this came to life. Features:
+
+* Tufte-style line plots in black and white, multiple lines allowed, SVG1.2
+  output
+* Settings: margins, font size (in fractions of the plot dimensions),
+  approximate number of "nice" tics on the axes, line stroke width (in CSS
+  units)
+* Subsampling: avoid drawing a line segment if it's shorter than given fraction
+  of the plot dimensions
 
 What does it look like?
 =======================
@@ -47,4 +55,3 @@ TODO
 ====
 
 - [ ] Aspect ratio as setting - as of now, it's 1:1 only
-- [ ] Plot subsampling - it's too easy to produce a megabyte-sized SVG, most of which you wouldn't look at
