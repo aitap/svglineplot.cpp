@@ -27,6 +27,13 @@ class svgplot {
 		return (x - range[0])/(range[1] - range[0]);
 	}
 
+	// TODO
+	void scale(
+		double x, const double xrange[2], double & xs,
+		double y, const double yrange[2], double & ys
+	); // to SVG pixels
+
+	// TODO: to_string
 	static unsigned int length(double x) {
 		// this is somewhat wasteful
 		std::stringstream s;
@@ -40,20 +47,22 @@ class svgplot {
 		std::size_t n;
 	};
 
+	double width, height; // SVG pixels
 	unsigned int tics; // how many tics to place on the axes
 	struct {
 		double x[2], y[2]; // plot coordinates: {min, max}
 	} range;
-	enum { bottom, left, top, right, n_margins_ };
-	double margins[n_margins_]; // fraction of plot size
-	double fontsize; // same
-	std::string strokewidth; // CSS units
-	double dmin; // Euclidean distance in plot coordinates to subsample at
+	struct {
+		double bottom, left, top, right;
+	} margins; // SVG pixels
+	std::string fontsize, stokewidth; // CSS units
+	double dmin; // Euclidean distance in SVG pixels to subsample at
 
 	std::vector<data> lines;
 
 public:
 	svgplot() {
+		set_dimensions(800, 600);
 		set_ntics(4);
 
 		// limits start with "impossible" values that would
@@ -82,16 +91,22 @@ public:
 		return *this;
 	}
 
-	svgplot & set_margins(double bot_, double lef_, double top_, double rig_) {
-		margins[bottom] = bot_;
-		margins[left] = lef_;
-		margins[top] = top_;
-		margins[right] = rig_;
+	svgplot & set_dimensions(double w, double h) {
+		width = w;
+		height = h;
 		return *this;
 	}
 
 	svgplot & set_ntics(unsigned int tics_) {
 		tics = tics_;
+		return *this;
+	}
+
+	svgplot & set_margins(double bot_, double lef_, double top_, double rig_) {
+		margins.bottom = bot_;
+		margins.left = lef_;
+		margins.top = top_;
+		margins.right = rig_;
 		return *this;
 	}
 
@@ -130,10 +145,10 @@ public:
 		ss.imbue(std::locale("C")); // prevent locale-related float formatting problems
 
 		ss << "<svg"
-			" version=\"1.2\" baseProfile=\"tiny\" xmlns=\"http://www.w3.org/2000/svg\""
-			" viewBox=\"" << -margins[left] << ' ' << -margins[top]
-			<< ' ' << 1 + margins[left] + margins[right]
-			<< ' ' << 1 + margins[bottom] + margins[top] << "\""
+			" version=\"1.1\" baseProfile=\"tiny\" xmlns=\"http://www.w3.org/2000/svg\""
+			" viewBox=\"" << -margins.left << ' ' << -margins.top
+			<< ' ' << 1 + margins.left + margins.right
+			<< ' ' << 1 + margins.bottom + margins.top << "\""
 			">\n"
 			"<style>\n"
 			"path { fill: none; stroke: black; stroke-width: " << strokewidth << "; }\n"
@@ -143,7 +158,7 @@ public:
 
 		// the plot area is just a series of lines, and there's a very
 		// effective representation for that; who knew?
-		ss << "<path vector-effect=\"non-scaling-stroke\" d=\"\n";
+		ss << "<path d=\"\n";
 
 		// Make the axes cover the actual data range (not extend to [0,1])
 		ss << "M" << scale(range.x[0], axes.x) << ",1"
@@ -182,13 +197,14 @@ public:
 		ss << "\"/>\n";
 
 		// path completed; add tic labels at remembered coordinates
+		// NOTE: dx and dy are very approximate and might break down depending on the font
 		for (size_t i = 0; i < xtics.size(); ++i)
 			ss << "<text x=\"" << scale(xtics[i], axes.x) << "\" dx=\"-"
 				<< length(xtics[i]) / 2. << "em\" y=\"1\" dy=\"1em\">"
 				<< xtics[i] << "</text>";
 		ss << "\n";
 		for (size_t i = 0; i < ytics.size(); ++i)
-			ss << "<text x=\"-" << length(ytics[i]) << "em\""
+			ss << "<text dx=\"-" << length(ytics[i]) << "em\""
 				" y=\"" << 1 - scale(ytics[i], axes.y) << "\" dy=\".5em\">"
 				<< ytics[i] << "</text>";
 		ss << "\n";
