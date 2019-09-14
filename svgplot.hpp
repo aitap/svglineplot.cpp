@@ -23,23 +23,19 @@ class svgplot {
 		return ret;
 	}
 
-	static double scale(double x, const double range[2]) { // to [0,1]
-		return (x - range[0])/(range[1] - range[0]);
+	double xscale(double x, const double range[2], const double margin[2]) {
+		return margin[0] + (margin[1] - margin[0]) * (x - range[0])/(range[1] - range[0]);
 	}
 
-	// TODO
-	void scale(
-		double x, const double xrange[2], double & xs,
-		double y, const double yrange[2], double & ys
-	); // to SVG pixels
+	double yscale(double y, const double range[2], const double margin[2]) {
+		return margin[0] + (margin[1] - margin[0]) * (range[1] - y)/(range[1] - range[0]);
+	}
 
-	// TODO: to_string
-	static unsigned int length(double x) {
-		// this is somewhat wasteful
+	static std::string to_string(double x) {
 		std::stringstream s;
 		s.imbue(std::locale("C"));
 		s << x;
-		return s.str().length();
+		return s.str();
 	}
 
 	struct data {
@@ -47,16 +43,13 @@ class svgplot {
 		std::size_t n;
 	};
 
-	double width, height; // SVG pixels
+	double width, height; // SVG user units
 	unsigned int tics; // how many tics to place on the axes
 	struct {
 		double x[2], y[2]; // plot coordinates: {min, max}
 	} range;
-	struct {
-		double bottom, left, top, right;
-	} margins; // SVG pixels
-	std::string fontsize, stokewidth; // CSS units
-	double dmin; // Euclidean distance in SVG pixels to subsample at
+	double fontsize, strokewidth; // SVG user units
+	double dmin; // Euclidean distance in ??? to subsample at
 
 	std::vector<data> lines;
 
@@ -72,12 +65,12 @@ public:
 		range.y[0] = std::numeric_limits<double>::max();
 		range.y[1] = std::numeric_limits<double>::min();
 
-		set_margins(.1, .15, .01, .01);
-		set_fontsize(margins[bottom] / 2);
-		set_strokewidth("1px");
+		set_fontsize(20);
+		set_strokewidth(1);
 		set_subsample(0);
 	}
 
+	// plot a line defined by arrays x[n], y[n]
 	svgplot & add_line(const double * x, const double * y, std::size_t n) {
 		// update ranges
 		range.x[0] = std::min(range.x[0], *std::min_element(x, x+n));
@@ -91,35 +84,33 @@ public:
 		return *this;
 	}
 
+	// set dimensions of the plot in SVG user units
 	svgplot & set_dimensions(double w, double h) {
 		width = w;
 		height = h;
 		return *this;
 	}
 
+	// set the number of tics on the axes
+	// (will be followed approximately, subject to "nice number" coordinates)
 	svgplot & set_ntics(unsigned int tics_) {
 		tics = tics_;
 		return *this;
 	}
 
-	svgplot & set_margins(double bot_, double lef_, double top_, double rig_) {
-		margins.bottom = bot_;
-		margins.left = lef_;
-		margins.top = top_;
-		margins.right = rig_;
-		return *this;
-	}
-
+	// font size, in SVG user units (NOTE: same as plot size)
 	svgplot & set_fontsize(double fs) {
 		fontsize = fs;
 		return *this;
 	}
 
-	svgplot & set_strokewidth(const std::string & sw) {
+	// line width for the plot and the axes, same units as plot size
+	svgplot & set_strokewidth(double sw) {
 		strokewidth = sw;
 		return *this;
 	}
 
+	// Euclidean distance in SVG user units at which to perform subsampling
 	svgplot & set_subsample(const double dmin_) {
 		dmin = dmin_;
 		return *this;
@@ -136,23 +127,34 @@ public:
 		};
 		// Tics at multiples of dx, dy
 		std::vector<double> xtics, ytics;
-		for (double x = dx * ceil(range.x[0] / dx); x <= dx * floor(range.x[1] / dx); x += dx)
+		std::vector<std::string> xlabs, ylabs;
+		double xlablen = 0, ylablen = 0;
+		for (double x = dx * ceil(range.x[0] / dx); x <= dx * floor(range.x[1] / dx); x += dx) {
 			xtics.push_back(x);
-		for (double y = dy * ceil(range.y[0] / dy); y <= dy * floor(range.y[1] / dy); y += dy)
+			std::string lab = to_string(x);
+			if (lab.length() > xlablen) xlablen = lab.length();
+			xlabs.push_back(lab);
+		}
+		for (double y = dy * ceil(range.y[0] / dy); y <= dy * floor(range.y[1] / dy); y += dy) {
 			ytics.push_back(y);
+			std::string lab = to_string(y);
+			if (lab.length() > ylablen) ylablen = lab.length();
+			ylabs.push_back(lab);
+		}
+		// Sort-of calculate the margin SVG coordinates based on the length of axis labels (FIXME)
+		struct { double x[2], y[2]; } margin = {
+			{ xlablen * fontsize, width * .99  }, { height - fontsize, height * .01 }
+		};
 
 		std::stringstream ss;
 		ss.imbue(std::locale("C")); // prevent locale-related float formatting problems
 
-		ss << "<svg"
-			" version=\"1.1\" baseProfile=\"tiny\" xmlns=\"http://www.w3.org/2000/svg\""
-			" viewBox=\"" << -margins.left << ' ' << -margins.top
-			<< ' ' << 1 + margins.left + margins.right
-			<< ' ' << 1 + margins.bottom + margins.top << "\""
+		ss << "<svg xmlns=\"http://www.w3.org/2000/svg\""
+			" viewBox=\"0 0 " << width << " " << height << "\""
 			">\n"
 			"<style>\n"
 			"path { fill: none; stroke: black; stroke-width: " << strokewidth << "; }\n"
-			"text { font-size: " << fontsize << "px; }\n"
+			"text { font-size: " << fontsize << "; }\n"
 			"</style>\n"
 		;
 
@@ -161,15 +163,15 @@ public:
 		ss << "<path d=\"\n";
 
 		// Make the axes cover the actual data range (not extend to [0,1])
-		ss << "M" << scale(range.x[0], axes.x) << ",1"
-			"L" << scale(range.x[1], axes.x) << ",1"
-			"M0," << 1 - scale(range.y[0], axes.y)
-			<< "L0," << 1 - scale(range.y[1], axes.y)
+		ss << "M" << xscale(range.x[0], axes.x, margin.x) << "," << margin.y[0]
+			<< "L" << xscale(range.x[1], axes.x, margin.x) << "," << margin.y[1]
+			<< "M" << margin.x[0] << "," << yscale(range.y[0], axes.y, margin.y)
+			<< "L" << margin.x[0] << "," << yscale(range.y[1], axes.y, margin.y)
 		;
 		// place tics on axes
 		for (size_t i = 0; i < xtics.size(); ++i)
-			ss << "M" << scale(xtics[i], axes.x) << ",1"
-				"L" << scale(xtics[i], axes.x) << ",1.01";
+			ss << "M" << xscale(xtics[i], axes.x, margin.x) << "," << magrin.y[0]
+				<< "L" << xscale(xtics[i], axes.x, margin.x) << "," << margin.y[0] * 1.01;
 		for (size_t i = 0; i < ytics.size(); ++i)
 			ss << "M0," << 1 - scale(ytics[i], axes.y)
 				<< "L-.01," << 1 - scale(ytics[i], axes.y);
@@ -200,13 +202,13 @@ public:
 		// NOTE: dx and dy are very approximate and might break down depending on the font
 		for (size_t i = 0; i < xtics.size(); ++i)
 			ss << "<text x=\"" << scale(xtics[i], axes.x) << "\" dx=\"-"
-				<< length(xtics[i]) / 2. << "em\" y=\"1\" dy=\"1em\">"
-				<< xtics[i] << "</text>";
+				<< xlabs[i].length() / 2. << "em\" y=\"1\" dy=\"1em\">"
+				<< xlabs[i] << "</text>";
 		ss << "\n";
 		for (size_t i = 0; i < ytics.size(); ++i)
-			ss << "<text dx=\"-" << length(ytics[i]) << "em\""
+			ss << "<text dx=\"-" << ylabs[i].length() << "em\""
 				" y=\"" << 1 - scale(ytics[i], axes.y) << "\" dy=\".5em\">"
-				<< ytics[i] << "</text>";
+				<< ylabs[i] << "</text>";
 		ss << "\n";
 
 		ss << "</svg>\n";
