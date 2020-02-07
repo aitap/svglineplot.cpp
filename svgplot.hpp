@@ -24,12 +24,8 @@ class svgplot {
 	}
 
 	// translate plot coordinates into SVG user coordinates
-	double xscale(double x, const double range[2], const double margin[2]) {
+	double scale(double x, const double range[2], const double margin[2]) {
 		return margin[0] + (margin[1] - margin[0]) * (x - range[0])/(range[1] - range[0]);
-	}
-
-	double yscale(double y, const double range[2], const double margin[2]) {
-		return margin[0] + (margin[1] - margin[0]) * (range[1] - y)/(range[1] - range[0]);
 	}
 
 	static std::string to_string(double x) {
@@ -165,26 +161,26 @@ public:
 		ss << "<path d=\"\n";
 
 		// Make the axes cover the actual data range (not extend to [0,1])
-		ss << "M" << xscale(range.x[0], axes.x, margin.x) << "," << margin.y[0]
-			<< "L" << xscale(range.x[1], axes.x, margin.x) << "," << margin.y[0]
-			<< "M" << margin.x[0] << "," << yscale(range.y[0], axes.y, margin.y)
-			<< "L" << margin.x[0] << "," << yscale(range.y[1], axes.y, margin.y)
+		ss << "M" << scale(range.x[0], axes.x, margin.x) << "," << margin.y[0]
+			<< "L" << scale(range.x[1], axes.x, margin.x) << "," << margin.y[0]
+			<< "M" << margin.x[0] << "," << scale(range.y[0], axes.y, margin.y)
+			<< "L" << margin.x[0] << "," << scale(range.y[1], axes.y, margin.y)
 		;
 		// place tics on axes
 		for (size_t i = 0; i < xtics.size(); ++i)
-			ss << "M" << xscale(xtics[i], axes.x, margin.x) << "," << margin.y[0]
-				<< "L" << xscale(xtics[i], axes.x, margin.x) << "," << margin.y[0] + fontsize / 5;
+			ss << "M" << scale(xtics[i], axes.x, margin.x) << "," << margin.y[0]
+				<< "L" << scale(xtics[i], axes.x, margin.x) << "," << margin.y[0] + fontsize / 5;
 		for (size_t i = 0; i < ytics.size(); ++i)
-			ss << "M" << margin.x[0] << "," << yscale(ytics[i], axes.y, margin.y)
-				<< "L" << margin.x[0] - fontsize / 5 << "," << yscale(ytics[i], axes.y, margin.y);
+			ss << "M" << margin.x[0] << "," << scale(ytics[i], axes.y, margin.y)
+				<< "L" << margin.x[0] - fontsize / 5 << "," << scale(ytics[i], axes.y, margin.y);
 		ss << "\n";
 
 		// now draw the actual lines
 		for (size_t i = 0; i < lines.size(); i++) {
 			for (size_t j = 0; j < lines[i].n; j++) {
 				double lastdrawn[2],
-					x = xscale(lines[i].x[j], axes.x, margin.x),
-					y = yscale(lines[i].y[j], axes.y, margin.y);
+					x = scale(lines[i].x[j], axes.x, margin.x),
+					y = scale(lines[i].y[j], axes.y, margin.y);
 				if (
 					!j || // first point should always be drawn
 					std::sqrt(
@@ -203,13 +199,13 @@ public:
 		// path completed; add tic labels at remembered coordinates
 		// NOTE: dx and dy are very approximate and might break down depending on the font
 		for (size_t i = 0; i < xtics.size(); ++i)
-			ss << "<text x=\"" << xscale(xtics[i], axes.x, margin.x) << "\" text-anchor=\"middle\""
+			ss << "<text x=\"" << scale(xtics[i], axes.x, margin.x) << "\" text-anchor=\"middle\""
 				" y=\"" << margin.y[0] + fontsize << "\">"
 				<< xlabs[i] << "</text>";
 		ss << "\n";
 		for (size_t i = 0; i < ytics.size(); ++i)
 			ss << "<text text-anchor=\"end\" x=\"" << margin.x[0] - fontsize / 5 << "\""
-				" y=\"" << yscale(ytics[i], axes.y, margin.y) + fontsize / 2 << "\">"
+				" y=\"" << scale(ytics[i], axes.y, margin.y) + fontsize / 2 << "\">"
 				<< ylabs[i] << "</text>";
 		ss << "\n";
 
