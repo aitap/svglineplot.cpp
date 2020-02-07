@@ -29,13 +29,7 @@ Since the plot I needed was *really* simple, this came to life. Features:
 What does it look like?
 =======================
 
-See the [example plot](example.svg). GitHub tries to "sanitize" it by removing
-an essential attribute and breaking the plot in the process (I agree that's a
-downside.)
-
-The plots are "responsive", which means that they retain the stroke width
-when scaled, but otherwise adapt to the viewport size, subject to their aspect
-ratio.
+![example plot](example.svg)
 
 How do I use it?
 ================
@@ -50,8 +44,3 @@ std::string svg = svgplot()
 	.set_ntics(7)
 	.draw();
 ```
-
-TODO
-====
-
-- [ ] Aspect ratio as setting - as of now, it's 1:1 only
