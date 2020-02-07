@@ -23,6 +23,7 @@ class svgplot {
 		return ret;
 	}
 
+	// translate plot coordinates into SVG user coordinates
 	double xscale(double x, const double range[2], const double margin[2]) {
 		return margin[0] + (margin[1] - margin[0]) * (x - range[0])/(range[1] - range[0]);
 	}
@@ -49,7 +50,7 @@ class svgplot {
 		double x[2], y[2]; // plot coordinates: {min, max}
 	} range;
 	double fontsize, strokewidth; // SVG user units
-	double dmin; // Euclidean distance in ??? to subsample at
+	double dmin; // Euclidean distance in SVG user units to subsample at
 
 	std::vector<data> lines;
 
@@ -67,7 +68,7 @@ public:
 
 		set_fontsize(20);
 		set_strokewidth(1);
-		set_subsample(0);
+		set_subsample(1);
 	}
 
 	// plot a line defined by arrays x[n], y[n]
@@ -141,16 +142,17 @@ public:
 			if (lab.length() > ylablen) ylablen = lab.length();
 			ylabs.push_back(lab);
 		}
-		// Sort-of calculate the margin SVG coordinates based on the length of axis labels (FIXME)
+		// Sort-of calculate the margin SVG coordinates based on the length of axis labels
+		// leave one fontsize worth of whitespace in the opposite margin
 		struct { double x[2], y[2]; } margin = {
-			{ xlablen * fontsize, width * .99  }, { height - fontsize, height * .01 }
+			{ xlablen * fontsize, width - fontsize }, { height - fontsize, fontsize }
 		};
 
 		std::stringstream ss;
 		ss.imbue(std::locale("C")); // prevent locale-related float formatting problems
 
 		ss << "<svg xmlns=\"http://www.w3.org/2000/svg\""
-			" viewBox=\"0 0 " << width << " " << height << "\""
+			" width=\"" << width << "\" height=\"" << height << "\""
 			">\n"
 			"<style>\n"
 			"path { fill: none; stroke: black; stroke-width: " << strokewidth << "; }\n"
@@ -164,25 +166,25 @@ public:
 
 		// Make the axes cover the actual data range (not extend to [0,1])
 		ss << "M" << xscale(range.x[0], axes.x, margin.x) << "," << margin.y[0]
-			<< "L" << xscale(range.x[1], axes.x, margin.x) << "," << margin.y[1]
+			<< "L" << xscale(range.x[1], axes.x, margin.x) << "," << margin.y[0]
 			<< "M" << margin.x[0] << "," << yscale(range.y[0], axes.y, margin.y)
 			<< "L" << margin.x[0] << "," << yscale(range.y[1], axes.y, margin.y)
 		;
 		// place tics on axes
 		for (size_t i = 0; i < xtics.size(); ++i)
-			ss << "M" << xscale(xtics[i], axes.x, margin.x) << "," << magrin.y[0]
-				<< "L" << xscale(xtics[i], axes.x, margin.x) << "," << margin.y[0] * 1.01;
+			ss << "M" << xscale(xtics[i], axes.x, margin.x) << "," << margin.y[0]
+				<< "L" << xscale(xtics[i], axes.x, margin.x) << "," << margin.y[0] + fontsize / 5;
 		for (size_t i = 0; i < ytics.size(); ++i)
-			ss << "M0," << 1 - scale(ytics[i], axes.y)
-				<< "L-.01," << 1 - scale(ytics[i], axes.y);
+			ss << "M" << margin.x[0] << "," << yscale(ytics[i], axes.y, margin.y)
+				<< "L" << margin.x[0] - fontsize / 5 << "," << yscale(ytics[i], axes.y, margin.y);
 		ss << "\n";
 
 		// now draw the actual lines
 		for (size_t i = 0; i < lines.size(); i++) {
 			for (size_t j = 0; j < lines[i].n; j++) {
 				double lastdrawn[2],
-					x = scale(lines[i].x[j], axes.x),
-					y = 1 - scale(lines[i].y[j], axes.y);
+					x = xscale(lines[i].x[j], axes.x, margin.x),
+					y = yscale(lines[i].y[j], axes.y, margin.y);
 				if (
 					!j || // first point should always be drawn
 					std::sqrt(
@@ -201,13 +203,13 @@ public:
 		// path completed; add tic labels at remembered coordinates
 		// NOTE: dx and dy are very approximate and might break down depending on the font
 		for (size_t i = 0; i < xtics.size(); ++i)
-			ss << "<text x=\"" << scale(xtics[i], axes.x) << "\" dx=\"-"
-				<< xlabs[i].length() / 2. << "em\" y=\"1\" dy=\"1em\">"
+			ss << "<text x=\"" << xscale(xtics[i], axes.x, margin.x) << "\" text-anchor=\"middle\""
+				" y=\"" << margin.y[0] + fontsize << "\">"
 				<< xlabs[i] << "</text>";
 		ss << "\n";
 		for (size_t i = 0; i < ytics.size(); ++i)
-			ss << "<text dx=\"-" << ylabs[i].length() << "em\""
-				" y=\"" << 1 - scale(ytics[i], axes.y) << "\" dy=\".5em\">"
+			ss << "<text text-anchor=\"end\" x=\"" << margin.x[0] - fontsize / 5 << "\""
+				" y=\"" << yscale(ytics[i], axes.y, margin.y) + fontsize / 2 << "\">"
 				<< ylabs[i] << "</text>";
 		ss << "\n";
 
